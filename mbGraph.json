@@ -1,0 +1,9 @@
+{
+  "interval": 15, 
+  "env": {
+    "CMSSW_RELEASE_BASE": "/cvmfs/cms-ib.cern.ch/week1/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_1_X_2016-07-27-1100", 
+    "CMSSW_GIT_HASH": "CMSSW_8_1_X_2016-07-27-1100", 
+    "SCRAM_ARCH": "slc6_amd64_gcc530"
+  }, 
+  "file": "performance.json"
+}
