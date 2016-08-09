@@ -1,8 +1,10 @@
-<div id="sequence"></div>
 <div id="main">
+    <div id="sequence"></div>
+    <br>
     <div id="chart">
         <div id="explanation" style="visibility: hidden;">
             <span id="percentage"></span>
+            <span id="folder"></span>
             <span id="size"></span>
             <br/> percentage of total and size in bytes
         </div>
@@ -36,13 +38,19 @@
     #explanation {
         position: relative;
         width: 100px;
+        height: 0px;
         text-align: center;
         color: #666;
         z-index: -1;
     }
 
     #percentage {
-        font-size: 1.8em;
+        font-size: 1.3em;
+    }
+
+    #folder{
+        font-size: 1.4em;
+        text-align: center;
     }
 
     #size{

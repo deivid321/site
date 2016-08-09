@@ -33,7 +33,6 @@ app.controller('InfoCtrl', function ($scope, $http, $location, Profile, LocParam
                 return null;
             };
 
-
             var prefix = find_prefix(window.location.pathname);
             if (prefix) {
                 var ref_base = "/SDT/jenkins-artifacts/ib-dqm-tests/" + ib + "/" + arch + "/" + prefix;
@@ -41,17 +40,14 @@ app.controller('InfoCtrl', function ($scope, $http, $location, Profile, LocParam
                     LocParams.p.reference = ref_base + "/performance.json";
                 }
             }
-            ;
         });
     };
 
     me.fetch_info();
 });
 
-app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocParams) {
-    var me = this;
-
-    function buildHierarchy(paths, totals, colors) {
+app.service('GraphService', function(){
+    this.buildHierarchy = function(paths, totals, colors) {
         var root = {"name": "root", "children": []};
         for (var i = 0; i < paths.length; i++) {
             var size = parseInt(totals[i]);
@@ -126,8 +122,7 @@ app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocPara
         return -1;
     }
 
-    // A - B 86183, 117385
-    function compare(paths1, totals1, paths2, totals2) {
+    this.compare = function(paths1, totals1, paths2, totals2) {
         for (var indA = 0; indA < paths1.length; indA++) {
             var valA = parseInt(totals1[indA]);
             if (valA <= 0) {
@@ -154,8 +149,14 @@ app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocPara
         }
     }
 
+})
+
+app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocParams, GraphService) {
+    var me = this;
+
     me.set_profile = function () {
         var target = LocParams.p.profile;
+        if (!target) return;
 
         me.profile = null;
         me.profile_url = target;
@@ -169,7 +170,6 @@ app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocPara
 
         var p = Profile.load(target);
         p.then(function (response) {
-            //$scope.status1 = response.statusText;
             me.profile = {};
             me.profile.paths = angular.fromJson(response.data.histograms[0].path);
             me.profile.totals = angular.fromJson(response.data.histograms[0].total);
@@ -181,9 +181,6 @@ app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocPara
             me.diffProfile.colors = {};
 
             me.list = ["profile"];
-            //var colors = {};
-            //me.profile = buildHierarchy(me.paths1, me.totals1, colors);
-            //me.colors = colors;
             me.update_graph_data();
         }, function (resp) {
             me.profile_error = "Failed to load profile: ";
@@ -194,13 +191,12 @@ app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocPara
 
     me.set_reference = function () {
         var target = LocParams.p.reference;
-        if (!target) {
-            return;
-        }
+        if (!target) return;
 
         me.reference = null;
         me.reference_url = target;
         me.reference_error = null;
+
         var p = Profile.load(target);
         p.then(function (response) {
             me.reference = {};
@@ -216,7 +212,6 @@ app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocPara
             me.list.push("reference");
             me.list.push("difference profile");
             me.list.push("difference reference");
-            //me.reference = buildHierarchy(me.paths2, me.totals2, colors);
             me.update_graph_data();
         }, function (resp) {
             me.reference_error = "Failed to load profile: ";
@@ -226,52 +221,41 @@ app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocPara
     };
 
     me.update_graph_data = function () {
+        if (!LocParams.p.show) LocParams.p.show = "profile";
         me.graph_data = null;
         if (!me.profile) return;
+
         if (!me.reference) {
-            me.graph_data = buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
+            me.graph_data = GraphService.buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
+            me.colors = me.profile.colors;
             return;
-        }else{
-            switch (LocParams.p.show){
-                case "profile":
-                    me.graph_data = buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
-                    break;
-                case "reference":
-                    me.graph_data = buildHierarchy(me.reference.paths, me.reference.totals, me.reference.colors);
-                    break;
-                case "difference profile":
-                    compare(me.diffProfile.paths, me.diffProfile.totals, me.diffRef.paths, me.diffRef.totals);
-                    me.diffProfile.colors={};
-                    me.graph_data = buildHierarchy(me.diffProfile.paths, me.diffProfile.totals, me.diffProfile.colors);
-                    break;
-                case "difference reference":
-                    compare(me.diffProfile.paths, me.diffProfile.totals, me.diffRef.paths, me.diffRef.totals);
-                    me.diffRef.colors={};
-                    me.graph_data = buildHierarchy(me.diffRef.paths, me.diffRef.totals, me.diffRef.colors);
-                    break;
-                default:
-                    me.graph_data = buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
-                    break;
-
-            }
-
         }
-
-        //me.graph_data_reference = me.reference;
-        /*
-        if (pid == "_sum") {
-            me.graph_data_reference = me.reference[pid];
-        } else {
-            me.graph_data_reference = null;
-            _.some(me.reference, function (v) {
-                if (v["cmdline"] == me.graph_data["cmdline"]) {
-                    me.graph_data_reference = v;
-                    return true;
-                }
-            });
-
+        switch (LocParams.p.show) {
+            case "profile":
+                me.graph_data = GraphService.buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
+                me.colors = me.profile.colors;
+                break;
+            case "reference":
+                me.graph_data = GraphService.buildHierarchy(me.reference.paths, me.reference.totals, me.reference.colors);
+                me.colors = me.reference.colors;
+                break;
+            case "difference profile":
+                GraphService.compare(me.diffProfile.paths, me.diffProfile.totals, me.diffRef.paths, me.diffRef.totals);
+                me.diffProfile.colors = {};
+                me.graph_data = GraphService.buildHierarchy(me.diffProfile.paths, me.diffProfile.totals, me.diffProfile.colors);
+                me.colors = me.diffProfile.colors;
+                break;
+            case "difference reference":
+                GraphService.compare(me.diffProfile.paths, me.diffProfile.totals, me.diffRef.paths, me.diffRef.totals);
+                me.diffRef.colors = {};
+                me.graph_data = GraphService.buildHierarchy(me.diffRef.paths, me.diffRef.totals, me.diffRef.colors);
+                me.colors = me.diffRef.colors;
+                break;
+            default:
+                me.graph_data = GraphService.buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
+                me.colors = me.profile.colors;
+                break;
         }
-        */
     };
 
     $scope.$watch(LocParams.watchFunc('show'), me.update_graph_data);
@@ -384,7 +368,6 @@ app.factory('LocParams', ['$location', '$rootScope', function ($location, $rootS
             if (old !== v) {
                 $location.search(k, me._value(v)).replace();
             }
-            ;
         });
     }, true);
 

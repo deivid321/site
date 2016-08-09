@@ -5,7 +5,7 @@ app.directive('memoryGraph', function ($window) {
     var d3 = $window.d3;
 
     return {
-        //restrict: 'E',
+        restrict: 'E',
         scope: {'data': '=', 'colors': '=', 'width': '@', 'height': '@'},
         templateUrl: "chart.html",
         link: function (scope, elm, attrs) {
@@ -30,9 +30,10 @@ app.directive('memoryGraph', function ($window) {
                 .attr("width", width)
                 .attr("x", 0)
                 .attr("height", height)
+                .attr("y", 0)
                 .append("svg:g")
                 .attr("id", "container")
-                .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+                .attr("transform", "translate(" + width/2 + "," + height/2  + ")");
 
             var partition = d3.layout.partition()
                 .size([2 * Math.PI, radius * radius])
@@ -60,6 +61,7 @@ app.directive('memoryGraph', function ($window) {
                 colors = scope.colors;
                 if (data) {
                     vis.selectAll(".nodePath").remove();
+                    d3.selectAll(".trail").remove();
                     showSunburst(data, 1, colors);
                 }
             };
@@ -119,17 +121,19 @@ app.directive('memoryGraph', function ($window) {
                     d3.selectAll("#percentage")
                         .text(percentageString);
 
+                    d3.select("#folder")
+                        .text(d.name);
+
                     d3.select("#size")
                         .text(d.value + "(B)");
 
                     d3.selectAll("#explanation")
                         .style("left", (width - 100) / 2 + "px")
-                        .style("top", (height + 102) / 2 + "px")
+                        .style("top", (height-100) / 2 + "px")
                         .style("visibility", "");
 
-                    var basicPath = [];
-                    var sequenceArray = getAncestors(d, basicPath);
-                    updateBreadcrumbs(basicPath, percentageString);
+                    var sequenceArray = getAncestors(d);
+                    updateBreadcrumbs(sequenceArray, percentageString);
 
                     // Fade all the segments.
                     d3.selectAll("path")
@@ -166,37 +170,21 @@ app.directive('memoryGraph', function ($window) {
                         .style("visibility", "hidden");
                 }
 
-                function getAncestors(node, basicPath) {
-                    var all = d3.selectAll("#chart path")[0];
-                    var ls = all.filter(function (obj) {
-                        var curr1 = obj.__data__;
-                        var nd = node;
-                        while (nd.name != "root") {
-                            if (curr1.name != nd.name) return false;
-                            curr1 = curr1.parent;
-                            nd = nd.parent;
-                        }
-                        return true;
-                    });
+                function getAncestors(node) {
                     var path = [];
-                    if (ls.length == 0) return null;
-                    var firstTime = 1;
-                    ls.forEach(function (el) {
-                        var current = el.__data__;
-                        while (current.parent) {
-                            path.unshift(current);
-                            if (firstTime && current.name != "root")
-                                basicPath.unshift(current);
-                            current = current.parent;
-                        }
-                        firstTime = 0;
-                    });
+                    var current = node;
+                    while (current.parent) {
+                        path.unshift(current);
+                        current = current.parent;
+                    }
                     return path;
                 }
 
                 function initializeBreadcrumbTrail() {
 
-                    var trail = d3.select("#sequence").append("svg:svg")
+                    var trail = d3.select("#sequence")
+                        .append("svg:svg")
+                        .classed("trail", true)
                         .attr("width", window.innerWidth)
                         .attr("height", 50)
                         .attr("id", "trail");
