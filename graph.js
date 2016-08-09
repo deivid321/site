@@ -51,184 +51,6 @@ app.controller('InfoCtrl', function ($scope, $http, $location, Profile, LocParam
 app.controller('GraphCtrl', function ($scope, $http, $location, Profile, LocParams) {
     var me = this;
 
-    me.set_profile = function () {
-        var target = LocParams.p.profile;
-
-        me.profile = null;
-        me.profile_url = target;
-        me.profile_error = null;
-
-        if (!me.profile_url) {
-            me.profile_error = "No profile provided";
-            me.update_graph_data();
-            return;
-        }
-
-        var p = Profile.load(target);
-        p.then(function (body) {
-            me.profile = body.data;
-            me.update_graph_data();
-        }, function (resp) {
-            me.profile_error = "Failed to load profile: ";
-            me.profile_error = me.reference_error + resp.status;
-            me.update_graph_data();
-        });
-    };
-
-    me.set_reference = function () {
-        var target = LocParams.p.reference;
-        if (!target) {
-            return;
-        }
-
-        me.reference = null;
-        me.reference_url = target;
-        me.reference_error = null;
-        var p = Profile.load(target);
-        p.then(function (body) {
-            me.reference = body.data;
-            me.update_graph_data();
-        }, function (resp) {
-            me.reference_error = "Failed to load profile: ";
-            me.reference_error = me.reference_error + resp.status;
-            me.update_graph_data();
-        });
-    };
-
-    me.update_graph_data = function () {
-        me.graph_data = null;
-        me.graph_data_reference = null;
-
-        if (!me.profile) return;
-
-        var pid = LocParams.p.pid;
-        if (pid === undefined) {
-            LocParams.setKey("pid", "_sum");
-            return; // <- next digest will redraw
-        }
-
-        me.graph_data = me.profile[pid];
-
-        if (!me.reference) return;
-
-        if (pid == "_sum") {
-            me.graph_data_reference = me.reference[pid];
-        } else {
-            me.graph_data_reference = null;
-            _.some(me.reference, function (v) {
-                if (v["cmdline"] == me.graph_data["cmdline"]) {
-                    me.graph_data_reference = v;
-                    return true;
-                }
-            });
-
-        }
-
-    };
-
-    $scope.$watch(LocParams.watchFunc('pid'), me.update_graph_data);
-    $scope.$watch(LocParams.watchFunc('profile'), me.set_profile);
-    $scope.$watch(LocParams.watchFunc('reference'), me.set_reference);
-});
-
-app.service("Profile", ['$window', '$http', function ($window, $http) {
-    var x = {};
-    var Profile = function () {
-        var obj = {};
-        return obj;
-    };
-
-    var pcnt2MB = function (x) {
-        var PAGE = 4096;
-        var MEGA = 1024 * 1024;
-        return parseFloat(x) * PAGE / MEGA;
-    };
-
-    var parseFrame = function (profile, frame) {
-        // do the sum magic (sum meta-process)
-        if (!profile["_sum"]) {
-            profile["_sum"] = {
-                'start_ts': frame["time"],
-                'frames': [],
-                'cmdline': "sum of all processes",
-                'cmdline_short': "sum of all processes"
-            };
-        }
-        ;
-
-        var sum_pdct = profile["_sum"];
-        var sum_frame = {
-            "p_run": 0, "p_stop": 0,
-            "pss": 0, "rss": 0, "virt": 0,
-            "time_diff": frame["time"] - sum_pdct["start_ts"]
-        };
-
-        // extract per pid memory usage and group it, well, per pid
-        angular.forEach(frame["known_pids"], function (proc_dct, key) {
-            // key of this dict is a pid
-            if (!profile[key]) {
-                profile[key] = {
-                    'start_ts': frame["time"],
-                    'frames': [],
-                };
-            }
-
-            // update/fill the array
-            pdct = profile[key];
-
-            // this needs an update, in cast there was an exec
-            pdct['cmdline'] = proc_dct["cmdline"];
-            if (pdct['cmdline'].length > 42) {
-                pdct["cmdline_short"] = pdct["cmdline"].substr(0, 45) + "...";
-            } else {
-                pdct["cmdline_short"] = pdct["cmdline"];
-            }
-
-            // parse statm
-            var statm = proc_dct["statm"].split(" ");
-            var virt = pcnt2MB(statm[0]);
-            var rss = pcnt2MB(statm[1]);
-            var pss = parseFloat(proc_dct["smaps_pss"]) / 1024 / 1024;
-
-            // now fill in the sum_pdct
-            if (proc_dct["running"]) {
-                pdct["frames"].push({
-                    'time_diff': frame["time"] - pdct["start_ts"],
-                    'rss': rss,
-                    'pss': pss,
-                    'virt': virt,
-                });
-
-                sum_frame["p_run"] = sum_frame["p_run"] + 1;
-
-                sum_frame["rss"] = sum_frame["rss"] + rss;
-                sum_frame["pss"] = sum_frame["pss"] + pss;
-                sum_frame["virt"] = sum_frame["virt"] + virt;
-            } else {
-                sum_frame["p_stop"] = sum_frame["p_stop"] + 1;
-            }
-
-            sum_pdct["frames"].push(sum_frame);
-        });
-    };
-
-    var makeProfile = function (x) {
-        var lines = x.split("\n");
-        var frames = {};
-        var profile = Profile();
-
-        angular.forEach(lines, function (v) {
-            var t = v.trim();
-            if (t.length < 1)
-                return;
-
-            var parsed = JSON.parse(t.trim());
-            parseFrame(profile, parsed);
-        });
-
-        return profile;
-    };
-
     function buildHierarchy(paths, totals, colors) {
         var root = {"name": "root", "children": []};
         for (var i = 0; i < paths.length; i++) {
@@ -270,108 +92,210 @@ app.service("Profile", ['$window', '$http', function ($window, $http) {
         return root;
     };
 
+    function hashCode(str) {
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return hash;
+    }
+
+    function intToRGB(i) {
+        var c = (i & 0x00FFFFFF)
+            .toString(16)
+            .toUpperCase();
+        return "#" + "00000".substring(0, 6 - c.length) + c;
+    }
+
+    function getIndex(array, key) {
+        var lo = 0,
+            hi = array.length - 1,
+            mid,
+            element;
+        while (lo <= hi) {
+            mid = ((lo + hi) >> 1);
+            element = array[mid];
+            if (element < key) {
+                lo = mid + 1;
+            } else if (element > key) {
+                hi = mid - 1;
+            } else {
+                return mid;
+            }
+        }
+        return -1;
+    }
+
+    // A - B 86183, 117385
+    function compare(paths1, totals1, paths2, totals2) {
+        for (var indA = 0; indA < paths1.length; indA++) {
+            var valA = parseInt(totals1[indA]);
+            if (valA <= 0) {
+                continue;
+            }
+            var item = paths1[indA];
+            var indB = getIndex(paths2, item);
+            if (indB >= 0) {
+                var valB = totals2[indB];
+                var diff = valA - valB;
+                if (diff == 0) {
+                    totals1[indA] = -1;
+                    totals2[indB] = -1;
+                }
+                if (diff > 0) {
+                    totals1[indA] = diff;
+                    totals2[indB] = -1;
+                }
+                if (diff < 0) {
+                    totals2[indB] = Math.abs(diff);
+                    totals1[indA] = -1;
+                }
+            }
+        }
+    }
+
+    me.set_profile = function () {
+        var target = LocParams.p.profile;
+
+        me.profile = null;
+        me.profile_url = target;
+        me.profile_error = null;
+
+        if (!me.profile_url) {
+            me.profile_error = "No profile provided";
+            me.update_graph_data();
+            return;
+        }
+
+        var p = Profile.load(target);
+        p.then(function (response) {
+            //$scope.status1 = response.statusText;
+            me.profile = {};
+            me.profile.paths = angular.fromJson(response.data.histograms[0].path);
+            me.profile.totals = angular.fromJson(response.data.histograms[0].total);
+            me.profile.colors = {};
+
+            me.diffProfile = {};
+            me.diffProfile.paths = me.profile.paths.slice(0);
+            me.diffProfile.totals = me.profile.totals.slice(0);
+            me.diffProfile.colors = {};
+
+            me.list = ["profile"];
+            //var colors = {};
+            //me.profile = buildHierarchy(me.paths1, me.totals1, colors);
+            //me.colors = colors;
+            me.update_graph_data();
+        }, function (resp) {
+            me.profile_error = "Failed to load profile: ";
+            me.profile_error = me.reference_error + resp.status;
+            me.update_graph_data();
+        });
+    };
+
+    me.set_reference = function () {
+        var target = LocParams.p.reference;
+        if (!target) {
+            return;
+        }
+
+        me.reference = null;
+        me.reference_url = target;
+        me.reference_error = null;
+        var p = Profile.load(target);
+        p.then(function (response) {
+            me.reference = {};
+            me.reference.paths = angular.fromJson(response.data.histograms[0].path);
+            me.reference.totals = angular.fromJson(response.data.histograms[0].total);
+            me.reference.colors = {};
+
+            me.diffRef = {};
+            me.diffRef.paths = me.reference.paths.slice(0);
+            me.diffRef.totals = me.reference.totals.slice(0);
+            me.diffRef.colors = {};
+
+            me.list.push("reference");
+            me.list.push("difference profile");
+            me.list.push("difference reference");
+            //me.reference = buildHierarchy(me.paths2, me.totals2, colors);
+            me.update_graph_data();
+        }, function (resp) {
+            me.reference_error = "Failed to load profile: ";
+            me.reference_error = me.reference_error + resp.status;
+            me.update_graph_data();
+        });
+    };
+
+    me.update_graph_data = function () {
+        me.graph_data = null;
+        if (!me.profile) return;
+        if (!me.reference) {
+            me.graph_data = buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
+            return;
+        }else{
+            switch (LocParams.p.show){
+                case "profile":
+                    me.graph_data = buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
+                    break;
+                case "reference":
+                    me.graph_data = buildHierarchy(me.reference.paths, me.reference.totals, me.reference.colors);
+                    break;
+                case "difference profile":
+                    compare(me.diffProfile.paths, me.diffProfile.totals, me.diffRef.paths, me.diffRef.totals);
+                    me.diffProfile.colors={};
+                    me.graph_data = buildHierarchy(me.diffProfile.paths, me.diffProfile.totals, me.diffProfile.colors);
+                    break;
+                case "difference reference":
+                    compare(me.diffProfile.paths, me.diffProfile.totals, me.diffRef.paths, me.diffRef.totals);
+                    me.diffRef.colors={};
+                    me.graph_data = buildHierarchy(me.diffRef.paths, me.diffRef.totals, me.diffRef.colors);
+                    break;
+                default:
+                    me.graph_data = buildHierarchy(me.profile.paths, me.profile.totals, me.profile.colors);
+                    break;
+
+            }
+
+        }
+
+        //me.graph_data_reference = me.reference;
+        /*
+        if (pid == "_sum") {
+            me.graph_data_reference = me.reference[pid];
+        } else {
+            me.graph_data_reference = null;
+            _.some(me.reference, function (v) {
+                if (v["cmdline"] == me.graph_data["cmdline"]) {
+                    me.graph_data_reference = v;
+                    return true;
+                }
+            });
+
+        }
+        */
+    };
+
+    $scope.$watch(LocParams.watchFunc('show'), me.update_graph_data);
+    $scope.$watch(LocParams.watchFunc('profile'), me.set_profile);
+    $scope.$watch(LocParams.watchFunc('reference'), me.set_reference);
+});
+
+app.service("Profile", ['$window', '$http', function ($window, $http) {
+    var x = {};
+    var Profile = function () {
+        var obj = {};
+        return obj;
+    };
+
     x.load = function (url) {
         var p = $http({
             url: url,
-            method: 'GET',
-            transformResponse: function (value, head, code) {
-                if (code != 200) {
-                    return null;
-                }
-
-                return makeProfile(value);
-            }
+            method: 'GET'
         });
-
         return p;
     };
 
     return x;
 }]);
-
-app.directive('memoryGraph', function ($window) {
-    var d3 = $window.d3;
-
-    return {
-        restrict: 'E',
-        scope: {'data': '=', 'width': '@', 'height': '@', 'referenceData': '='},
-        link: function (scope, elm, attrs) {
-            var width = parseInt(scope.width);
-            var height = parseInt(scope.height);
-
-            var div = d3.select(elm[0]).append("div");
-            div.attr("style", "position: relative");
-
-            var svg = div.append("svg");
-            svg.attr("width", width).attr("height", height);
-
-            var chart = nv.models.lineChart()
-                    .margin({left: 100})
-                    .useInteractiveGuideline(false)
-                    .showLegend(true)
-                    .transitionDuration(350)
-                    .showYAxis(true)
-                    .showXAxis(true)
-                    .forceY(0)
-                ;
-
-            chart.interactiveLayer.tooltip.enabled(false);
-            chart.interactiveLayer.tooltip.position({"left": 0, "top": 0});
-
-            chart.xAxis
-                .axisLabel('Time (s.)')
-                //    .tickFormat(d3.time.format('%X'));
-                .tickFormat(d3.format('.01f'));
-
-            chart.yAxis
-                .axisLabel('Mem (mb)')
-                .tickFormat(d3.format('.02f'));
-
-            var update = function () {
-                var data = scope.data;
-
-                //console.log("data", data);
-                if (!data) {
-                    svg.selectAll("*").remove();
-
-                    svg
-                        .datum([])
-                        .transition().duration(500)
-                        .call(chart)
-                    return;
-                }
-
-                var make_xy = function (frames, metric, color, ref) {
-                    var new_data = _.map(frames, function (frame) {
-                        return {'y': frame[metric], 'x': frame["time_diff"], '_obj': frame};
-                    });
-
-                    var key = metric;
-                    if (ref) key = key + " (ref)";
-                    return {values: new_data, 'key': key, 'color': color, classed: 'dashed'};
-                };
-
-                var datum = [
-                    make_xy(data.frames, 'pss', "#1f77b4", false),
-                    make_xy(data.frames, 'virt', "#ff7f0e", false),
-                ];
-
-                if (scope.referenceData) {
-                    datum.push(make_xy(scope.referenceData.frames, 'pss', "#aec7e8", true));
-                    datum.push(make_xy(scope.referenceData.frames, 'virt', "#ffbb78", true));
-                }
-
-                svg
-                    .datum(datum)
-                    .transition().duration(500)
-                    .call(chart)
-                ;
-            };
-            scope.$watch("data", update);
-            scope.$watch("referenceData", update);
-        }
-    };
-});
 
 app.factory('LocParams', ['$location', '$rootScope', function ($location, $rootScope) {
     var me = {};

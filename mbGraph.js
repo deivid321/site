@@ -56,7 +56,8 @@ app.controller('GraphCtrl', function($scope, $http, $location, Profile, LocParam
         me.profile = null;
         me.profile_url = target;
         me.profile_error = null;
-
+        me.list = new {};
+        me.list.add("profile");
         if (! me.profile_url) {
             me.profile_error = "No profile provided";
             me.update_graph_data();

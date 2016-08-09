@@ -1,0 +1,51 @@
+<div id="sequence"></div>
+<div id="main">
+    <div id="chart">
+        <div id="explanation" style="visibility: hidden;">
+            <span id="percentage"></span>
+            <span id="size"></span>
+            <br/> percentage of total and size in bytes
+        </div>
+    </div>
+</div>
+
+<style>
+    #main {
+        margin: 0 0 0 0;
+    }
+
+    #sequence {
+        height: 50px;
+        margin: 0 0 0 0;
+    }
+
+    #sequence text {
+        font-weight: 600;
+        fill: #fff;
+    }
+
+    #chart {
+        float: left;
+        position: relative;
+    }
+
+    #chart path {
+        stroke: #fff;
+    }
+
+    #explanation {
+        position: relative;
+        width: 100px;
+        text-align: center;
+        color: #666;
+        z-index: -1;
+    }
+
+    #percentage {
+        font-size: 1.8em;
+    }
+
+    #size{
+        font-size: 1.3em;
+    }
+</style>

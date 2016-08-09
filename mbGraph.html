@@ -5,7 +5,8 @@
 
     <title>mbGraph</title>
 
-    <script data-require="d3@3.3.11" data-semver="3.3.11" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.3.11/d3.js"></script>
+    <!--<script data-require="d3@3.3.11" data-semver="3.3.11" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.3.11/d3.js"></script> -->
+    <script src="https://d3js.org/d3.v3.min.js"></script>
     <script data-require="nvd3@*" data-semver="1.1.14-beta" src="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.14-beta/nv.d3.js"></script>
 
     <script src="//code.jquery.com/jquery-2.1.4.min.js" data-semver="2.1.4" data-require="jquery@*"></script>
@@ -16,6 +17,7 @@
     <link data-require="nvd3@*" data-semver="1.1.14-beta" rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/nvd3/1.1.14-beta/nv.d3.css" />
 
     <script src="graph.js"></script>
+    <script src="memoryGraph.js"></script>
     <style>
 .dashed { stroke-dasharray: 5,5; }
     </style>
@@ -55,9 +57,17 @@
               </select>
             </div>
           </form>
+
+          <form class="form-inline">
+            <div class="form-group">
+              <label for="dataInput" class="control-label">Select chart to show: </label>
+              <select class="form-control" id="dataInput" ng-model="LocParams.p.show" ng-options="item for item in GraphCtrl.list">
+              </select>
+            </div>
+          </form>
         </div>
 
-        <memory-graph width="800" height="400" data="GraphCtrl.graph_data" reference-data="GraphCtrl.graph_data_reference"></memory-graph>
+        <memory-graph width="1140" height="600" data="GraphCtrl.graph_data" colors="GraphCtrl.profile.colors"></memory-graph>
 
         <div ng-show="GraphCtrl.graph_data">
           <p>
