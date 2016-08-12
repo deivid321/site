@@ -1,6 +1,3 @@
-/**
- * Created by deivydas on 08/08/16.
- */
 app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams) {
     var d3 = $window.d3;
 
@@ -18,7 +15,8 @@ app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams
                 t: 10
             };
 
-            var clicked = false;
+            // Specific folder is selected by mouse click.
+            var isClicked = false;
 
             // Dimensions of sunburst frame
             var width = parseInt(scope.width);//window.innerWidth;
@@ -57,14 +55,12 @@ app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams
                     return Math.sqrt(d.y + d.dy);
                 });
 
-            var colors = {};
+            // Update after changed view mode.
             var update = function () {
-                var data = scope.data;
-                colors = scope.colors;
-                if (data) {
+                if (scope.data) {
                     vis.selectAll(".nodePath").remove();
                     d3.selectAll(".trail").remove();
-                    showSunburst(data, 1, colors);
+                    showSunburst(scope.data, 1, scope.colors);
                 }
             };
 
@@ -111,26 +107,54 @@ app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams
                     // Get total size of the tree = value of root node from partition.
                     totalSize = path[0].parentNode.__data__.value;
 
-                    if (LocParams.p.selected){
-                        angular.forEach(nodes, function (d){
-                            if (LocParams.p.selected===d.name) {
-                                mouseover(d);
-                                clicked = true;
+                    // Read url parameter and set node as selected.
+                    if (LocParams.p.selected) {
+                        var path = LocParams.p.selected.split("-");
+                        for (var i = 0; i < nodes.length; i++) {
+                            if (path[0] === nodes[i].name) {
+                                var k = 1, correct = true;
+                                var current = nodes[i].parent;
+                                while (current.parent) {
+                                    if (path[k] != current.name) {
+                                        correct = false;
+                                        break;
+                                    }
+                                    current = current.parent;
+                                    k++;
+                                }
+                                if (!correct) continue;
+                                mouseover(nodes[i]);
+                                isClicked = true;
+                                break;
                             }
-                        })
+                        }
                     }
                 };
 
-                function mouseclick(d){
-                    if (clicked) clicked = false;
-                        else clicked = true;
-                    LocParams.p.selected = d.name;
+                // Select or unset folder and change url parameter.
+                function mouseclick(d) {
+                    if (isClicked) {
+                        isClicked = false;
+                        LocParams.p.selected = null;
+                        mouseover(d);
+                    }
+                    else {
+                        isClicked = true;
+                        var path = "";
+                        path = d.name;
+                        var current = d.parent;
+                        while (current.parent) {
+                            path += "-" + current.name;
+                            current = current.parent;
+                        }
+                        LocParams.p.selected = path;
+                    }
                     $rootScope.$apply();
                 }
 
                 // Fade all but the current sequence, and show it in the breadcrumb trail.
                 function mouseover(d) {
-                    if (clicked) return;
+                    if (isClicked) return;
                     var percentage = (100 * d.value / totalSize).toPrecision(3);
                     var percentageString = percentage + "%";
                     if (percentage < 0.05) {
@@ -147,7 +171,7 @@ app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams
                         .text(d.value + "(B)");
 
                     d3.selectAll("#explanation")
-                        .style("left", width/4 - 100/ 2 + "px")
+                        .style("left", width / 4 - 100 / 2 + "px")
                         .style("top", (height - 100) / 2 + "px")
                         .style("visibility", "");
 
@@ -168,7 +192,7 @@ app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams
 
                 // Restore everything to full opacity when moving off the visualization.
                 function mouseleave(d) {
-                    if (clicked) return;
+                    if (isClicked) return;
                     // Hide the breadcrumb trail
                     d3.select("#trail")
                         .style("visibility", "hidden");
@@ -259,8 +283,6 @@ app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams
 
 
                     function wrap(text, width) {
-                        var el = text;
-
                         text.each(function () {
                             var text = d3.select(this),
                                 words = text[0][0].__data__.name.match(new RegExp('.{1,' + width + '}', 'g')).reverse(),

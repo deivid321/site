@@ -46,8 +46,8 @@ app.controller('InfoCtrl', function ($scope, $http, $location, Profile, LocParam
     me.fetch_info();
 });
 
-app.service('GraphService', function(){
-    this.buildHierarchy = function(paths, totals, colors) {
+app.service('GraphService', function () {
+    this.buildHierarchy = function (paths, totals, colors) {
         var root = {"name": "root", "children": []};
         for (var i = 0; i < paths.length; i++) {
             var size = parseInt(totals[i]);
@@ -122,7 +122,7 @@ app.service('GraphService', function(){
         return -1;
     }
 
-    this.compare = function(paths1, totals1, paths2, totals2) {
+    this.compare = function (paths1, totals1, paths2, totals2) {
         for (var indA = 0; indA < paths1.length; indA++) {
             var valA = parseInt(totals1[indA]);
             if (valA <= 0) {

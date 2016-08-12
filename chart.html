@@ -1,44 +1,91 @@
 <div id="main">
     <div id="sequence"></div>
     <br>
-    <div id="chart">
-        <div id="explanation" style="visibility: hidden;">
-            <span id="percentage_center" class="percentage"></span>
-            <span id="size_center" class="size"></span>
-            <br/> percentage of total and size in bytes
+    <div class="container">
+        <div class="row">
+            <div id="chart" class="col-sm-8">
+                <div id="explanation" style="visibility: hidden;">
+                    <span id="percentage_center" class="percentage"></span>
+                    <span id="size_center" class="size"></span>
+                    <br/> percentage of total and size in bytes
+                </div>
+            </div>
+
+            <div class="col-sm-4">
+                <div class="col-sm-12">
+                    <div class="free-space"></div>
+                </div>
+                <table class="table">
+                    <h3 align="center">Folder info</h3>
+                    <tr>
+                        <th>Folder name:</th>
+                        <td id="folder"></td>
+                    </tr>
+                    <tr>
+                        <th>Size:</th>
+                        <td id="size table" class="size"></td>
+                    </tr>
+                    <tr>
+                        <th>Percentage of total:</th>
+                        <td id="percentage_table" class="percentage"></td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
-    <table>
-        <tr>
-            <th>Folder name:</th>
-            <td id="folder"></td>
-        </tr>
-        <tr>
-            <th>Size (MB):</th>
-            <td id="size table" class="size"></td>
-        </tr>
-        <tr>
-            <th>Percentage of total:</th>
-            <td id="percentage_table" class="percentage"></td>
-        </tr>
-    </table>
 </div>
 
 <style>
-    #main {  margin: 0 0 0 0;  }
 
-    #sequence { height: 50px; margin: 0 0 0 0;  }
-    #sequence text { font-weight: 600;  fill: #fff; }
+    .free-space{
+        padding: 30px;
+        min-height: 100px;
+        margin-bottom: 20px;
+    }
 
-    #chart { float: left; position: relative;  }
-    #chart path {  stroke: #fff;  }
+    #main {
+        margin: 0 0 0 0;
+    }
 
-    #explanation {  position: relative;  width: 100px;  height: 0px;  text-align: center;  color: #666;  z-index: -1;  }
+    #sequence {
+        height: 50px;
+        margin: 0 0 0 0;
+    }
 
-    #percentage_center {  font-size: 1.3em;  }
+    #sequence text {
+        font-weight: 600;
+        fill: #fff;
+    }
 
-    #folder-wasincenter{  font-size: 1.4em;  text-align: center;  }
+    #chart {
+        float: left;
+        position: relative;
+    }
 
-    #size_center{  font-size: 1.3em;  }
+    #chart path {
+        stroke: #fff;
+    }
+
+    #explanation {
+        position: relative;
+        width: 100px;
+        height: 0px;
+        text-align: center;
+        color: #666;
+        z-index: -1;
+    }
+
+    #percentage_center {
+        font-size: 1.3em;
+    }
+
+    #folder-wasincenter {
+        font-size: 1.4em;
+        text-align: center;
+    }
+
+    #size_center {
+        font-size: 1.3em;
+    }
 
 </style>
