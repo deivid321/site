@@ -3,57 +3,42 @@
     <br>
     <div id="chart">
         <div id="explanation" style="visibility: hidden;">
-            <span id="percentage"></span>
-            <span id="folder"></span>
-            <span id="size"></span>
+            <span id="percentage_center" class="percentage"></span>
+            <span id="size_center" class="size"></span>
             <br/> percentage of total and size in bytes
         </div>
     </div>
+    <table>
+        <tr>
+            <th>Folder name:</th>
+            <td id="folder"></td>
+        </tr>
+        <tr>
+            <th>Size (MB):</th>
+            <td id="size table" class="size"></td>
+        </tr>
+        <tr>
+            <th>Percentage of total:</th>
+            <td id="percentage_table" class="percentage"></td>
+        </tr>
+    </table>
 </div>
 
 <style>
-    #main {
-        margin: 0 0 0 0;
-    }
+    #main {  margin: 0 0 0 0;  }
 
-    #sequence {
-        height: 50px;
-        margin: 0 0 0 0;
-    }
+    #sequence { height: 50px; margin: 0 0 0 0;  }
+    #sequence text { font-weight: 600;  fill: #fff; }
 
-    #sequence text {
-        font-weight: 600;
-        fill: #fff;
-    }
+    #chart { float: left; position: relative;  }
+    #chart path {  stroke: #fff;  }
 
-    #chart {
-        float: left;
-        position: relative;
-    }
+    #explanation {  position: relative;  width: 100px;  height: 0px;  text-align: center;  color: #666;  z-index: -1;  }
 
-    #chart path {
-        stroke: #fff;
-    }
+    #percentage_center {  font-size: 1.3em;  }
 
-    #explanation {
-        position: relative;
-        width: 100px;
-        height: 0px;
-        text-align: center;
-        color: #666;
-        z-index: -1;
-    }
+    #folder-wasincenter{  font-size: 1.4em;  text-align: center;  }
 
-    #percentage {
-        font-size: 1.3em;
-    }
+    #size_center{  font-size: 1.3em;  }
 
-    #folder{
-        font-size: 1.4em;
-        text-align: center;
-    }
-
-    #size{
-        font-size: 1.3em;
-    }
 </style>

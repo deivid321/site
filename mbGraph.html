@@ -72,20 +72,6 @@
 
         <memory-graph width="1140" height="520" data="GraphCtrl.graph_data" colors="GraphCtrl.colors"></memory-graph>
 
-        <div ng-show="GraphCtrl.graph_data">
-            <p>
-                Process: <strong>{{ GraphCtrl.graph_data.cmdline }}</strong>.
-                Started at <strong>{{ GraphCtrl.graph_data.start_ts*1000 | date:'yyyy-MM-dd HH:mm:ss Z' }}</strong>
-                and contains <strong>{{ GraphCtrl.graph_data.frames.length }}</strong> frames.
-                <br/>
-                <span ng-show="GraphCtrl.graph_data_reference">
-              Reference process: <strong>{{ GraphCtrl.graph_data_reference.cmdline }}</strong>.
-              Started at <strong>{{ GraphCtrl.graph_data_reference.start_ts*1000 | date:'yyyy-MM-dd HH:mm:ss Z' }}</strong>
-              and contains <strong>{{ GraphCtrl.graph_data_reference.frames.length }}</strong> frames.
-            </span>
-            </p>
-        </div>
-
     </div> <!-- graphctrl -->
 
 </div>

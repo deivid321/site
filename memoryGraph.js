@@ -1,7 +1,7 @@
 /**
  * Created by deivydas on 08/08/16.
  */
-app.directive('memoryGraph', function ($window) {
+app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams) {
     var d3 = $window.d3;
 
     return {
@@ -17,7 +17,9 @@ app.directive('memoryGraph', function ($window) {
                 s: 10,
                 t: 10
             };
-            var id = 1;
+
+            var clicked = false;
+
             // Dimensions of sunburst frame
             var width = parseInt(scope.width);//window.innerWidth;
             var height = parseInt(scope.height); //window.innerHeight;
@@ -27,13 +29,13 @@ app.directive('memoryGraph', function ($window) {
             var totalSize = 0;
 
             var vis = d3.select("#chart").append("svg:svg")
-                .attr("width", width)
+                .attr("width", width / 2)
                 .attr("x", 0)
                 .attr("height", height)
                 .attr("y", 0)
                 .append("svg:g")
                 .attr("id", "container")
-                .attr("transform", "translate(" + width/2 + "," + height/2  + ")");
+                .attr("transform", "translate(" + width / 4 + "," + height / 2 + ")");
 
             var partition = d3.layout.partition()
                 .size([2 * Math.PI, radius * radius])
@@ -100,36 +102,53 @@ app.directive('memoryGraph', function ($window) {
                             return colors[d.name];
                         })
                         .style("opacity", 1)
-                        .on("mouseover", mouseover);
+                        .on("mouseover", mouseover)
+                        .on("click", mouseclick);
 
                     // Add the mouseleave handler to the bounding circle.
                     d3.select("#container").on("mouseleave", mouseleave);
 
                     // Get total size of the tree = value of root node from partition.
                     totalSize = path[0].parentNode.__data__.value;
+
+                    if (LocParams.p.selected){
+                        angular.forEach(nodes, function (d){
+                            if (LocParams.p.selected===d.name) {
+                                mouseover(d);
+                                clicked = true;
+                            }
+                        })
+                    }
                 };
+
+                function mouseclick(d){
+                    if (clicked) clicked = false;
+                        else clicked = true;
+                    LocParams.p.selected = d.name;
+                    $rootScope.$apply();
+                }
 
                 // Fade all but the current sequence, and show it in the breadcrumb trail.
                 function mouseover(d) {
-
+                    if (clicked) return;
                     var percentage = (100 * d.value / totalSize).toPrecision(3);
                     var percentageString = percentage + "%";
                     if (percentage < 0.05) {
                         percentageString = "< 0.05%";
                     }
 
-                    d3.selectAll("#percentage")
+                    d3.selectAll(".percentage")
                         .text(percentageString);
 
                     d3.select("#folder")
                         .text(d.name);
 
-                    d3.select("#size")
+                    d3.selectAll(".size")
                         .text(d.value + "(B)");
 
                     d3.selectAll("#explanation")
-                        .style("left", (width - 100) / 2 + "px")
-                        .style("top", (height-100) / 2 + "px")
+                        .style("left", width/4 - 100/ 2 + "px")
+                        .style("top", (height - 100) / 2 + "px")
                         .style("visibility", "");
 
                     var sequenceArray = getAncestors(d);
@@ -149,7 +168,7 @@ app.directive('memoryGraph', function ($window) {
 
                 // Restore everything to full opacity when moving off the visualization.
                 function mouseleave(d) {
-
+                    if (clicked) return;
                     // Hide the breadcrumb trail
                     d3.select("#trail")
                         .style("visibility", "hidden");
@@ -235,7 +254,54 @@ app.directive('memoryGraph', function ($window) {
                         .attr("text-anchor", "middle")
                         .text(function (d) {
                             return d.name;
+                        })
+                        .call(wrap, 19);
+
+
+                    function wrap(text, width) {
+                        var el = text;
+
+                        text.each(function () {
+                            var text = d3.select(this),
+                                words = text[0][0].__data__.name.match(new RegExp('.{1,' + width + '}', 'g')).reverse(),
+                                word;
+                            if (words.length > 2) text.attr("y", b.h / 4);
+                            var line = [],
+                                lineNumber = 0,
+                                lineHeight = 1.1, // ems
+                                x = text.attr("x"),
+                                y = text.attr("y"),
+                                dy = 0, //parseFloat(text.attr("dy")),
+                                tspan = text.text(null)
+                                    .append("tspan")
+                                    .attr("x", x)
+                                    .attr("y", y)
+                                    .attr("dy", dy + "em");
+
+                            var k = 0;
+                            while (word = words.pop()) {
+                                line.push(word);
+                                tspan.text(line.join(" "));
+                                if (tspan.node().getComputedTextLength() > b.w - b.t - b.t) {
+                                    line.pop();
+                                    tspan.text(line.join(" "));
+                                    line = [word];
+                                    if (!k) {
+                                        tspan.text(word);
+                                    }
+                                    else {
+                                        tspan = text.append("tspan")
+                                            .attr("x", x)
+                                            .attr("y", y)
+                                            .attr("dy", ++lineNumber * lineHeight + dy + "em")
+                                            .text(word);
+                                    }
+
+                                }
+                                k++;
+                            }
                         });
+                    }
 
                     // Set position for entering and updating nodes.
                     g.attr("transform", function (d, i) {

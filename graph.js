@@ -303,7 +303,7 @@ app.factory('LocParams', ['$location', '$rootScope', function ($location, $rootS
         }
     };
 
-    // parameters inside a locaton (what we know)
+    // parameters inside a location (what we know)
     // cannot be modified by the scope
     me._params_location = {};
 
