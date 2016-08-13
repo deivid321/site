@@ -54,16 +54,8 @@
 
             <form class="form-inline">
                 <div class="form-group">
-                    <label for="pidInput" class="control-label">Select process: </label>
-                    <select class="form-control" id="pidInput" ng-model="LocParams.p.pid" ng-options="key as key + ': ' + value.cmdline_short for (key, value) in GraphCtrl.profile">
-                    </select>
-                </div>
-            </form>
-
-            <form class="form-inline">
-                <div class="form-group">
                     <label for="dataInput" class="control-label">Select chart to show: </label>
-                    <select class="form-control" id="dataInput" ng-model="LocParams.p.show" ng-options="item for item in GraphCtrl.list">
+                    <select class="form-control" id="dataInput" ng-model="LocParams.p.show" ng-options="item for item in GraphCtrl.list track by item">
                     </select>
                 </div>
             </form>

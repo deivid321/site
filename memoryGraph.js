@@ -15,9 +15,6 @@ app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams
                 t: 10
             };
 
-            // Specific folder is selected by mouse click.
-            var isClicked = false;
-
             // Dimensions of sunburst frame
             var width = parseInt(scope.width);//window.innerWidth;
             var height = parseInt(scope.height); //window.innerHeight;
@@ -65,6 +62,9 @@ app.directive('memoryGraph', function ($rootScope, $location, $window, LocParams
             };
 
             function showSunburst(json, id, colors) {
+
+                // Specific folder is selected by mouse click.
+                var isClicked = false;
 
                 createVisualization(json);
 
